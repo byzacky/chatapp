@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Join a Private Room</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Start Private Chat</h2>
+    <input id="room" placeholder="Enter Room Name (e.g. user1-user2)">
+    <button onclick="joinRoom()">Enter Room</button>
+  </div>
+
+  <script>
+    function joinRoom() {
+      const room = document.getElementById('room').value.trim();
+      if (!room) return alert("Room name required");
+      window.location.href = `private.html?room=${encodeURIComponent(room)}`;
+    }
+  </script>
+</body>
+</html>

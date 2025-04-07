@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Private Chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>🔐 Private Chat</h2>
+    <div id="roomName"></div>
+    <div id="messages"></div>
+    <input id="input" placeholder="Type your private message..." onkeydown="handleKey(event)">
+    <button onclick="send()">Send</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io("http://localhost:3000"); // Change this if using Render
+    const username = localStorage.getItem('username');
+    const urlParams = new URLSearchParams(window.location.search);
+    const room = urlParams.get('room');
+
+    if (!username || !room) window.location.href = 'index.html';
+
+    document.getElementById('roomName').textContent = `Room: ${room}`;
+
+    socket.emit('join', { name: username }, (res) => {
+      if (!res.success) {
+        alert(res.message);
+        window.location.href = 'index.html';
+      }
+    });
+
+    socket.emit('join-room', room);
+
+    function handleKey(e) {
+      if (e.key === 'Enter') send();
+    }
+
+    function send() {
+      const input = document.getElementById('input');
+      const msg = input.value.trim();
+      if (!msg) return;
+      socket.emit('private-chat', { room, message: msg });
+      addMessage(`${username}: ${msg}`);
+      input.value = '';
+    }
+
+    function addMessage(msg) {
+      const div = document.createElement('div');
+      div.textContent = msg;
+      document.getElementById('messages').appendChild(div);
+      document.getElementById('messages').scrollTop = messages.scrollHeight;
+    }
+
+    socket.on('private-message', ({ from, message }) => {
+      addMessage(`${from}: ${message}`);
+    });
+  </script>
+</body>
+</html>

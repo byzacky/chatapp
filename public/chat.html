@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Public Chat Room</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>🟢 Public Chat Room</h2>
+
+    <div id="messages"></div>
+
+    <input id="input" placeholder="Type your message..." onkeydown="handleKey(event)">
+    <button onclick="send()">Send</button>
+
+    <hr style="margin: 20px 0; border-color: #333;">
+
+    <button onclick="goToRooms()">💬 Start Private Chat</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+  <script>
+    function goToRooms() {
+      window.location.href = 'rooms.html';
+    }
+  </script>
+</body>
+</html>
