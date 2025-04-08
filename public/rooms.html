@@ -1,22 +1,54 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Join a Private Room</title>
+  <title>Private Chat Rooms</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
-    <h2>Start Private Chat</h2>
-    <input id="room" placeholder="Enter Room Name (e.g. user1-user2)">
-    <button onclick="joinRoom()">Enter Room</button>
+    <h2>🔐 Private Chat Rooms</h2>
+    <p>Welcome, <span id="display-username"></span>!</p>
+
+    <div>
+      <h3>Create a Private Chat</h3>
+      <input id="new-room-name" placeholder="Enter new room name">
+      <button onclick="createRoom()">Create Room</button>
+    </div>
+
+    <div>
+      <h3>Join an Existing Private Chat</h3>
+      <input id="existing-room-name" placeholder="Enter existing room name">
+      <button onclick="joinRoom()">Join Room</button>
+    </div>
   </div>
 
   <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const username = localStorage.getItem('username');
+      if (!username) {
+        window.location.href = 'index.html';
+      } else {
+        document.getElementById('display-username').textContent = username;
+      }
+    });
+
+    function createRoom() {
+      const roomName = document.getElementById('new-room-name').value.trim();
+      if (roomName) {
+        window.location.href = `private.html?room=${encodeURIComponent(roomName)}&action=create`;
+      } else {
+        alert('Please enter a room name to create.');
+      }
+    }
+
     function joinRoom() {
-      const room = document.getElementById('room').value.trim();
-      if (!room) return alert("Room name required");
-      window.location.href = `private.html?room=${encodeURIComponent(room)}`;
+      const roomName = document.getElementById('existing-room-name').value.trim();
+      if (roomName) {
+        window.location.href = `private.html?room=${encodeURIComponent(roomName)}&action=join`;
+      } else {
+        alert('Please enter a room name to join.');
+      }
     }
   </script>
 </body>

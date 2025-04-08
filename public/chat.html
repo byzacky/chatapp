@@ -2,28 +2,230 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Public Chat Room</title>
+  <title>Public Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Hamburger Menu -->
+  <div class="menu-button" onclick="toggleMenu()">☰</div>
+  <div id="menu" class="menu-panel" style="display: none;">
+    <button onclick="openCalculator()">🧮 Calculator</button>
+    <button onclick="goToVoice()">🎤 Voice Chat</button>
+    <button onclick="openChatbot()">🤖 Chat with AI</button>
+    <button onclick="goToRooms()">🔐 Private Chat</button>
+  </div>
+
+  <!-- Chat Container -->
   <div class="container">
-    <h2>🟢 Public Chat Room</h2>
-
+    <h2>🟢 Public Chat</h2>
     <div id="messages"></div>
-
-    <input id="input" placeholder="Type your message..." onkeydown="handleKey(event)">
-    <button onclick="send()">Send</button>
-
-    <hr style="margin: 20px 0; border-color: #333;">
-
-    <button onclick="goToRooms()">💬 Start Private Chat</button>
+    <div class="input-wrapper">
+      <button onclick="triggerFileUpload()" class="plus-button">➕</button>
+      <input id="input" placeholder="Type your message..." onkeydown="handleKey(event)">
+      <button onclick="send()">Send</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display: none;">
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
   <script>
+    function goToVoice() {
+      const code = prompt("Enter voice chat access code:");
+      if (code === "pioniers") {
+        window.location.href = "voice.html";
+      } else {
+        alert("Incorrect code.");
+      }
+    }
+    const socket = io();
+    const username = localStorage.getItem('username');
+    if (!username) window.location.href = 'index.html';
+
+    socket.emit('join', { name: username }, (res) => {
+      if (!res.success) {
+        alert(res.message);
+        window.location.href = 'index.html';
+      }
+    });
+
+    socket.on('message', data => {
+      const div = document.createElement('div');
+      if (typeof data === 'string') {
+        div.textContent = data;
+      } else if (data.type === 'text') {
+        div.textContent = `${data.from}: ${data.content}`;
+      } else if (data.type === 'image') {
+        div.innerHTML = `${data.from}:<br><img src="${data.content}" style="max-width: 200px;">`;
+      }
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    function handleKey(e) {
+      if (e.key === 'Enter') send();
+    }
+
+    function send() {
+      const input = document.getElementById('input');
+      const text = input.value.trim();
+      if (text) {
+        socket.emit('chat', { type: 'text', content: text, from: username });
+        input.value = '';
+      }
+    }
+
+    function triggerFileUpload() {
+      document.getElementById('fileInput').click();
+    }
+
+    document.getElementById('fileInput').addEventListener('change', () => {
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        socket.emit('chat', { type: 'image', content: reader.result, from: username });
+      };
+      reader.readAsDataURL(file);
+      document.getElementById('fileInput').value = '';
+    });
+
+    function toggleMenu() {
+      const menu = document.getElementById('menu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+
     function goToRooms() {
       window.location.href = 'rooms.html';
+    }
+
+    // === Calculator ===
+    function openCalculator() {
+      if (document.getElementById('calculator-app')) return;
+      const html = `
+        <div id="calculator-app" style="position: fixed; top: 100px; left: 100px; width: 260px; background: #333; padding: 10px; border-radius: 10px; z-index: 1000;">
+          <div id="calc-header" style="cursor: move; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: white;">🧮 Calculator</span>
+            <button onclick="closeCalculator()" style="background: red; color: white;">X</button>
+          </div>
+          <div id="calc-display" style="background: #000; color: #0f0; padding: 10px; font-size: 20px; text-align: right; margin-top: 10px;">0</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px;">
+            <button onclick="press('7')">7</button><button onclick="press('8')">8</button><button onclick="press('9')">9</button><button onclick="press('/')">÷</button>
+            <button onclick="press('4')">4</button><button onclick="press('5')">5</button><button onclick="press('6')">6</button><button onclick="press('*')">×</button>
+            <button onclick="press('1')">1</button><button onclick="press('2')">2</button><button onclick="press('3')">3</button><button onclick="press('-')">−</button>
+            <button onclick="press('0')">0</button><button onclick="press('.')">.</button><button onclick="calculateResult()">=</button><button onclick="press('+')">+</button>
+            <button onclick="clearCalc()" style="grid-column: span 2;">C</button><button onclick="backspace()" style="grid-column: span 2;">←</button>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', html);
+      makeCalculatorDraggable();
+    }
+
+    function closeCalculator() {
+      const el = document.getElementById('calculator-app');
+      if (el) el.remove();
+    }
+
+    let calcExpression = '';
+    function press(val) {
+      calcExpression += val;
+      document.getElementById('calc-display').textContent = calcExpression;
+    }
+    function clearCalc() {
+      calcExpression = '';
+      document.getElementById('calc-display').textContent = '0';
+    }
+    function backspace() {
+      calcExpression = calcExpression.slice(0, -1);
+      document.getElementById('calc-display').textContent = calcExpression || '0';
+    }
+    function calculateResult() {
+      try {
+        const result = eval(calcExpression);
+        document.getElementById('calc-display').textContent = result;
+        calcExpression = result.toString();
+      } catch {
+        document.getElementById('calc-display').textContent = 'Error';
+        calcExpression = '';
+      }
+    }
+
+    function makeCalculatorDraggable() {
+      const dragEl = document.getElementById('calculator-app');
+      const header = document.getElementById('calc-header');
+      let isDragging = false, offsetX = 0, offsetY = 0;
+      header.onmousedown = (e) => {
+        isDragging = true;
+        offsetX = e.clientX - dragEl.offsetLeft;
+        offsetY = e.clientY - dragEl.offsetTop;
+      };
+      document.onmousemove = (e) => {
+        if (!isDragging) return;
+        dragEl.style.left = (e.clientX - offsetX) + 'px';
+        dragEl.style.top = (e.clientY - offsetY) + 'px';
+      };
+      document.onmouseup = () => isDragging = false;
+    }
+
+    // === ChatGPT Bot (via proxy) ===
+    function openChatbot() {
+      if (document.getElementById('chatbot-app')) return;
+      const html = `
+        <div id="chatbot-app" style="position: fixed; top: 150px; left: 150px; width: 300px; background: #333; padding: 10px; border-radius: 10px; z-index: 1000;">
+          <div id="chatbot-header" style="cursor: move; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: white;">🤖 Chat with AI</span>
+            <button onclick="closeChatbot()" style="background: red; color: white;">X</button>
+          </div>
+          <div id="chatbot-history" style="height: 200px; overflow-y: auto; background: #111; color: white; padding: 10px; margin: 10px 0;"></div>
+          <textarea id="aiInput" rows="3" placeholder="Ask something..." style="width: 100%;"></textarea>
+          <button onclick="askChatbot()" style="width: 100%; margin-top: 5px;">Send</button>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', html);
+      makeChatbotDraggable();
+    }
+
+    function closeChatbot() {
+      const el = document.getElementById('chatbot-app');
+      if (el) el.remove();
+    }
+
+    function makeChatbotDraggable() {
+      const dragEl = document.getElementById('chatbot-app');
+      const header = document.getElementById('chatbot-header');
+      let isDragging = false, offsetX = 0, offsetY = 0;
+      header.onmousedown = (e) => {
+        isDragging = true;
+        offsetX = e.clientX - dragEl.offsetLeft;
+        offsetY = e.clientY - dragEl.offsetTop;
+      };
+      document.onmousemove = (e) => {
+        if (!isDragging) return;
+        dragEl.style.left = (e.clientX - offsetX) + 'px';
+        dragEl.style.top = (e.clientY - offsetY) + 'px';
+      };
+      document.onmouseup = () => isDragging = false;
+    }
+
+    async function askChatbot() {
+      const prompt = document.getElementById('aiInput').value.trim();
+      if (!prompt) return;
+      const history = document.getElementById('chatbot-history');
+      const userMsg = document.createElement('div');
+      userMsg.textContent = `${username}: ${prompt}`;
+      history.appendChild(userMsg);
+      document.getElementById('aiInput').value = "";
+
+      const res = await fetch("/ask-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+      const aiMsg = document.createElement('div');
+      aiMsg.innerHTML = `<strong>AI:</strong> ${data.reply}`;
+      history.appendChild(aiMsg);
+      history.scrollTop = history.scrollHeight;
     }
   </script>
 </body>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Voice Chat</title>
+  <style>
+    body {
+      background: #1e1e2f;
+      color: white;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .user-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .user-box {
+      background: #2f2f40;
+      border-radius: 10px;
+      padding: 10px;
+      width: 200px;
+      text-align: center;
+    }
+
+    .avatar {
+      background: #555;
+      color: white;
+      font-size: 24px;
+      border-radius: 50%;
+      width: 64px;
+      height: 64px;
+      line-height: 64px;
+      margin: auto;
+    }
+
+    video {
+      margin-top: 10px;
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    .controls {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .round-button {
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      margin-right: 10px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .round-button.active {
+      background: #1abc9c;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🎧 Voice Chat</h2>
+    <p id="status">Connecting...</p>
+    <div class="user-grid" id="userList"></div>
+
+    <div class="controls">
+      <button id="muteBtn" class="round-button" onclick="toggleMute()">🔇</button>
+      <button id="deafenBtn" class="round-button" onclick="toggleDeafen()">🔕</button>
+      <button id="videoBtn" class="round-button" onclick="toggleVideo()">📷</button>
+      <button class="round-button" onclick="startScreenShare()">🖥️</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const username = localStorage.getItem("username");
+    const room = "voice-room";
+    const userList = document.getElementById("userList");
+
+    const peerConnections = {};
+    let localStream;
+    let isMuted = false;
+    let isDeafened = false;
+    let isVideoEnabled = true;
+
+    const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+    if (!username) window.location.href = "index.html";
+
+    navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(stream => {
+      localStream = stream;
+      addUserBox(socket.id, username, true, stream, true);
+      socket.emit("join-voice", { room, username });
+
+      socket.on("new-user", ({ id, name }) => {
+        createPeer(id, name);
+      });
+
+      socket.on("offer", async ({ id, offer, name }) => {
+        await createPeer(id, name);
+        await peerConnections[id].setRemoteDescription(offer);
+        const answer = await peerConnections[id].createAnswer();
+        await peerConnections[id].setLocalDescription(answer);
+        socket.emit("answer", { id, answer });
+      });
+
+      socket.on("answer", ({ id, answer }) => {
+        peerConnections[id].setRemoteDescription(answer);
+      });
+
+      socket.on("candidate", ({ id, candidate }) => {
+        peerConnections[id].addIceCandidate(new RTCIceCandidate(candidate));
+      });
+
+      socket.on("user-disconnected", id => {
+        if (peerConnections[id]) peerConnections[id].close();
+        delete peerConnections[id];
+        const box = document.getElementById("box-" + id);
+        if (box) box.remove();
+      });
+
+      document.getElementById("status").textContent = "🟢 Connected as " + username;
+    });
+
+    function createPeer(id, name) {
+      const pc = new RTCPeerConnection(config);
+      peerConnections[id] = pc;
+
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      pc.onicecandidate = e => {
+        if (e.candidate) socket.emit("candidate", { id, candidate: e.candidate });
+      };
+
+      pc.ontrack = e => {
+        addUserBox(id, name, false, e.streams[0]);
+      };
+
+      return pc.createOffer().then(offer => {
+        pc.setLocalDescription(offer);
+        socket.emit("offer", { id, offer });
+      });
+    }
+
+    function addUserBox(id, name, isSelf, stream, mute = false) {
+      if (document.getElementById("box-" + id)) return;
+
+      const box = document.createElement("div");
+      box.className = "user-box";
+      box.id = "box-" + id;
+      box.innerHTML = `
+        <div class="avatar">${name[0].toUpperCase()}</div>
+        <div>${isSelf ? "🫵 " : ""}${name}</div>
+        <video id="video-${id}" autoplay playsinline ${mute ? "muted" : ""}></video>
+      `;
+      userList.appendChild(box);
+      const video = document.getElementById(`video-${id}`);
+      video.srcObject = stream;
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+      document.getElementById("muteBtn").classList.toggle("active", isMuted);
+    }
+
+    function toggleDeafen() {
+      isDeafened = !isDeafened;
+      document.querySelectorAll("video").forEach(video => {
+        if (!video.id.includes(socket.id)) {
+          video.muted = isDeafened;
+        }
+      });
+      document.getElementById("deafenBtn").classList.toggle("active", isDeafened);
+    }
+
+    function toggleVideo() {
+      isVideoEnabled = !isVideoEnabled;
+      localStream.getVideoTracks().forEach(track => track.enabled = isVideoEnabled);
+      document.getElementById("videoBtn").classList.toggle("active", isVideoEnabled);
+    }
+
+    async function startScreenShare() {
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = screenStream.getVideoTracks()[0];
+        for (const pc of Object.values(peerConnections)) {
+          const sender = pc.getSenders().find(s => s.track.kind === "video");
+          if (sender) sender.replaceTrack(screenTrack);
+        }
+
+        screenTrack.onended = () => {
+          navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(stream => {
+            const camTrack = stream.getVideoTracks()[0];
+            for (const pc of Object.values(peerConnections)) {
+              const sender = pc.getSenders().find(s => s.track.kind === "video");
+              if (sender) sender.replaceTrack(camTrack);
+            }
+            localStream = stream;
+          });
+        };
+      } catch (err) {
+        alert("Screen share failed: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
