@@ -29,22 +29,15 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    function goToVoice() {
-      const code = prompt("Enter voice chat access code:");
-      if (code === "pioniers") {
-        window.location.href = "voice.html";
-      } else {
-        alert("Incorrect code.");
-      }
-    }
     const socket = io();
-    const username = localStorage.getItem('username');
-    if (!username) window.location.href = 'index.html';
+    const username = localStorage.getItem("username");
+    if (!username) window.location.href = "index.html";
 
     socket.emit('join', { name: username }, (res) => {
       if (!res.success) {
         alert(res.message);
-        window.location.href = 'index.html';
+        localStorage.removeItem("username");
+        window.location.href = "index.html";
       }
     });
 
@@ -98,6 +91,15 @@
       window.location.href = 'rooms.html';
     }
 
+    function goToVoice() {
+      const code = prompt("Enter voice chat access code:");
+      if (code === "pioniers") {
+        window.location.href = "voice.html";
+      } else {
+        alert("Incorrect code.");
+      }
+    }
+
     // === Calculator ===
     function openCalculator() {
       if (document.getElementById('calculator-app')) return;
@@ -115,8 +117,7 @@
             <button onclick="press('0')">0</button><button onclick="press('.')">.</button><button onclick="calculateResult()">=</button><button onclick="press('+')">+</button>
             <button onclick="clearCalc()" style="grid-column: span 2;">C</button><button onclick="backspace()" style="grid-column: span 2;">←</button>
           </div>
-        </div>
-      `;
+        </div>`;
       document.body.insertAdjacentHTML('beforeend', html);
       makeCalculatorDraggable();
     }
@@ -167,7 +168,7 @@
       document.onmouseup = () => isDragging = false;
     }
 
-    // === ChatGPT Bot (via proxy) ===
+    // === Chatbot (Cohere) ===
     function openChatbot() {
       if (document.getElementById('chatbot-app')) return;
       const html = `
@@ -179,8 +180,7 @@
           <div id="chatbot-history" style="height: 200px; overflow-y: auto; background: #111; color: white; padding: 10px; margin: 10px 0;"></div>
           <textarea id="aiInput" rows="3" placeholder="Ask something..." style="width: 100%;"></textarea>
           <button onclick="askChatbot()" style="width: 100%; margin-top: 5px;">Send</button>
-        </div>
-      `;
+        </div>`;
       document.body.insertAdjacentHTML('beforeend', html);
       makeChatbotDraggable();
     }
@@ -211,9 +211,11 @@
       const prompt = document.getElementById('aiInput').value.trim();
       if (!prompt) return;
       const history = document.getElementById('chatbot-history');
+
       const userMsg = document.createElement('div');
       userMsg.textContent = `${username}: ${prompt}`;
       history.appendChild(userMsg);
+
       document.getElementById('aiInput').value = "";
 
       const res = await fetch("/ask-ai", {
@@ -221,6 +223,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
       });
+
       const data = await res.json();
       const aiMsg = document.createElement('div');
       aiMsg.innerHTML = `<strong>AI:</strong> ${data.reply}`;

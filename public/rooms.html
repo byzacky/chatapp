@@ -24,14 +24,9 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const username = localStorage.getItem('username');
-      if (!username) {
-        window.location.href = 'index.html';
-      } else {
-        document.getElementById('display-username').textContent = username;
-      }
-    });
+    const username = localStorage.getItem('username');
+    if (!username) window.location.href = 'index.html';
+    else document.getElementById('display-username').textContent = username;
 
     function createRoom() {
       const roomName = document.getElementById('new-room-name').value.trim();

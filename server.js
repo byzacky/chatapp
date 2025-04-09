@@ -12,11 +12,10 @@ app.use(cors());
 app.use(express.static('public'));
 app.use(express.json());
 
-const activeUsers = new Set();
+const usernameToSocket = {}; // { username: socket.id }
+const socketToUsername = {}; // { socket.id: username }
 const activeRooms = new Set();
-const socketIdToUsername = {};
 
-// ✅ Cohere AI
 app.post('/ask-ai', async (req, res) => {
   const prompt = req.body.prompt;
 
@@ -44,62 +43,60 @@ app.post('/ask-ai', async (req, res) => {
 io.on('connection', (socket) => {
   let username = null;
 
-  // ✅ PUBLIC CHAT JOIN
   socket.on('join', ({ name }, callback) => {
-    if (activeUsers.has(name)) {
+    if (usernameToSocket[name]) {
       return callback({ success: false, message: 'Username taken' });
     }
+
     username = name;
-    activeUsers.add(name);
-    socketIdToUsername[socket.id] = username;
+    usernameToSocket[username] = socket.id;
+    socketToUsername[socket.id] = username;
     callback({ success: true });
+
     socket.broadcast.emit('message', `${username} joined the public chat`);
 
-    // ✅ PUBLIC MESSAGES
     socket.on('chat', (msg) => {
       io.emit('message', msg);
     });
 
-    // ✅ PRIVATE ROOM CREATION/JOIN
     socket.on('handle-room', ({ room, action }, callback) => {
       if (action === 'create') {
-        if (activeRooms.has(room)) return callback({ success: false, message: 'Room already exists' });
+        if (activeRooms.has(room)) {
+          return callback({ success: false, message: 'Room already exists' });
+        }
         activeRooms.add(room);
       } else if (!activeRooms.has(room)) {
         return callback({ success: false, message: 'Room does not exist' });
       }
+
       socket.join(room);
       callback({ success: true });
     });
 
-    // ✅ PRIVATE CHAT
     socket.on('private-chat', ({ room, type, content }) => {
       const msg = { from: username, type, content };
       socket.to(room).emit('private-message', msg);
-      socket.emit('private-message', msg);
+      socket.emit('private-message', msg); // echo back to sender
     });
 
     socket.on('join-room', (room) => {
       socket.join(room);
     });
 
-    // ✅ VOICE CHAT
+    // VOICE CHAT
     socket.on('join-voice', ({ room, username }) => {
       socket.join(room);
-      socketIdToUsername[socket.id] = username;
+      socketToUsername[socket.id] = username;
 
-      // Send existing peers to new user
       const clientsInRoom = Array.from(io.sockets.adapter.rooms.get(room) || []);
       clientsInRoom.forEach(id => {
         if (id !== socket.id) {
-          socket.emit('new-user', { id, name: socketIdToUsername[id] || "User" });
+          socket.emit('new-user', { id, name: socketToUsername[id] || "User" });
         }
       });
 
-      // Notify existing users about new one
       socket.to(room).emit('new-user', { id: socket.id, name: username });
 
-      // WebRTC signaling
       socket.on('offer', ({ id, offer }) => {
         io.to(id).emit('offer', { id: socket.id, offer, name: username });
       });
@@ -111,13 +108,14 @@ io.on('connection', (socket) => {
       socket.on('candidate', ({ id, candidate }) => {
         io.to(id).emit('candidate', { id: socket.id, candidate });
       });
+    });
 
-      socket.on('disconnect', () => {
-        activeUsers.delete(username);
-        delete socketIdToUsername[socket.id];
-        socket.to(room).emit('user-disconnected', socket.id);
-        io.emit('message', `${username} left the chat`);
-      });
+    socket.on('disconnect', () => {
+      const name = socketToUsername[socket.id];
+      delete usernameToSocket[name];
+      delete socketToUsername[socket.id];
+      io.emit('message', `${name} left the chat`);
+      socket.broadcast.emit('user-disconnected', socket.id);
     });
   });
 });
