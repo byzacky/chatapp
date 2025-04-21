@@ -1,25 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Enter Username</title>
+  <meta charset="UTF-8">
+  <title>Snappet</title>
+  <link rel="icon" sizes="192x192" href="https://pupil.snappet.org/icon192.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
-    <h2>Enter Your Username</h2>
-    <input id="username" placeholder="e.g. Zacky2030">
-    <button onclick="saveUsername()">Continue</button>
+    <h2>🔐 Login to Chat</h2>
+    <input id="username" placeholder="Username" />
+    <input id="password" type="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
     <p id="error" style="color: red;"></p>
   </div>
+
   <script>
-    function saveUsername() {
+    async function login() {
       const username = document.getElementById('username').value.trim();
-      if (username.length < 3) {
-        document.getElementById('error').textContent = 'Username too short!';
-        return;
+      const password = document.getElementById('password').value.trim();
+
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem('username', username);
+        localStorage.setItem('rank', data.rank); // store the rank for command permissions
+        window.location.href = 'chat.html';
+      } else {
+        document.getElementById('error').textContent = data.message;
       }
-      localStorage.setItem('username', username);
-      window.location.href = 'chat.html';
     }
   </script>
 </body>

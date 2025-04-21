@@ -2,7 +2,8 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Public Chat</title>
+  <title>Snappet</title>
+  <link rel="icon" sizes="192x192" href="https://pupil.snappet.org/icon192.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,15 +16,16 @@
     <button onclick="goToRooms()">🔐 Private Chat</button>
   </div>
 
-  <!-- Chat Container -->
   <div class="container">
     <h2>🟢 Public Chat</h2>
     <div id="messages"></div>
+
     <div class="input-wrapper">
       <button onclick="triggerFileUpload()" class="plus-button">➕</button>
       <input id="input" placeholder="Type your message..." onkeydown="handleKey(event)">
       <button onclick="send()">Send</button>
     </div>
+
     <input type="file" id="fileInput" accept="image/*" style="display: none;">
   </div>
 
@@ -33,7 +35,7 @@
     const username = localStorage.getItem("username");
     if (!username) window.location.href = "index.html";
 
-    socket.emit('join', { name: username }, (res) => {
+    socket.emit('join', { name: username, context: 'public' }, (res) => {
       if (!res.success) {
         alert(res.message);
         localStorage.removeItem("username");
@@ -168,7 +170,7 @@
       document.onmouseup = () => isDragging = false;
     }
 
-    // === Chatbot (Cohere) ===
+    // === Chatbot (Cohere)
     function openChatbot() {
       if (document.getElementById('chatbot-app')) return;
       const html = `
@@ -211,11 +213,9 @@
       const prompt = document.getElementById('aiInput').value.trim();
       if (!prompt) return;
       const history = document.getElementById('chatbot-history');
-
       const userMsg = document.createElement('div');
       userMsg.textContent = `${username}: ${prompt}`;
       history.appendChild(userMsg);
-
       document.getElementById('aiInput').value = "";
 
       const res = await fetch("/ask-ai", {

@@ -1,0 +1,52 @@
+{
+  "aa01": {
+    "password": "modpass",
+    "rank": "mod",
+    "banned": false
+  },
+  "aa02": {
+    "password": "aa02@",
+    "rank": "member",
+    "banned": false
+  },
+  "aa03": {
+    "password": "aa03@",
+    "rank": "member",
+    "banned": false
+  },
+  "aa04": {
+    "password": "aa04@",
+    "rank": "member",
+    "banned": false
+  },
+  "aa05": {
+    "password": "aa05@",
+    "rank": "member",
+    "banned": false
+  },
+  "aa06": {
+    "password": "aa06@",
+    "rank": "member",
+    "banned": false
+  },
+  "aa07": {
+    "password": "aa07@",
+    "rank": "member",
+    "banned": false
+  },
+  "aa08": {
+    "password": "aa08@",
+    "rank": "member",
+    "banned": false
+  },
+  "aa09": {
+    "password": "aa09@",
+    "rank": "member",
+    "banned": false
+  },
+  "aa10": {
+    "password": "aa10@",
+    "rank": "member",
+    "banned": false
+  }
+}
