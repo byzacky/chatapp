@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Video Search</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* quick tweaks */
+    .search-area { display:flex; gap:8px; margin:20px 0; }
+    #results { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
+    .video-card { background:#222; padding:8px; border-radius:6px; color:#fff; }
+    .video-card img { width:100%; border-radius:4px; cursor:pointer; }
+    .video-card h4 { font-size:14px; margin:8px 0 0; cursor:pointer; }
+    #playerModal { position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);
+      display:none;align-items:center;justify-content:center; }
+    #playerModal iframe { width:80%; height:60%; }
+    #playerModal .close { position:absolute;top:20px;right:20px;font-size:32px;color:#fff;cursor:pointer; }
+  </style>
+</head>
+<body>
+  <!-- reuse your menu button if you like -->
+  <div class="menu-button" onclick="toggleMenu()">☰</div>
+  <div id="menu" class="menu-panel" style="display:none;">
+    <button onclick="location.href='chat.html'">🏠 Public</button>
+    <button onclick="location.href='rooms.html'">🔒 Rooms</button>
+    <button onclick="location.href='username.html'">💬 DMs</button>
+    <button onclick="location.href='voice.html'">🎤 Voice</button>
+    <button onclick="location.href='video.html'">🎥 Video Search</button>
+    <button onclick="location.href='admin.html'">🛠️ Admin</button>
+  </div>
+
+  <div class="container">
+    <h2>🎥 YouTube Video Search</h2>
+    <div class="search-area">
+      <input id="q" placeholder="Search YouTube..." style="flex:1;padding:8px"/>
+      <button id="btn-search">Search</button>
+    </div>
+    <div id="results"></div>
+  </div>
+
+  <!-- modal to play -->
+  <div id="playerModal">
+    <div class="close" onclick="closePlayer()">×</div>
+    <iframe id="ytPlayer" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+  </div>
+
+  <script>
+    const API_KEY = 'AIzaSyBEVoQzJEVahJtZLPsR08dPk7KcuBUEtNo'; // ← REPLACE with your key
+    document.getElementById('btn-search').onclick = search;
+    async function search() {
+      const q = encodeURIComponent(document.getElementById('q').value);
+      if (!q) return;
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=${q}&key=${API_KEY}`
+      );
+      const data = await res.json();
+      const out = document.getElementById('results');
+      out.innerHTML = data.items.map(item => {
+        const vid = item.id.videoId;
+        const thumb = item.snippet.thumbnails.medium.url;
+        const title = item.snippet.title;
+        return `
+          <div class="video-card" onclick="playVideo('${vid}')">
+            <img src="${thumb}" />
+            <h4>${title}</h4>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function playVideo(id) {
+      document.getElementById('ytPlayer').src =
+        `https://www.youtube.com/embed/${id}?autoplay=1`;
+      document.getElementById('playerModal').style.display = 'flex';
+    }
+    function closePlayer() {
+      document.getElementById('playerModal').style.display = 'none';
+      document.getElementById('ytPlayer').src = '';
+    }
+
+    // reuse your toggleMenu() from chat.html
+    function toggleMenu(){
+      const m = document.getElementById('menu');
+      m.style.display = m.style.display==='none'?'block':'none';
+    }
+  </script>
+</body>
+</html>

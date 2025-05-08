@@ -1,7 +1,16 @@
 <!DOCTYPE html>
-<html>
-<head><title>No Access</title></head>
-<body style="font-family: sans-serif; background: #222; color: white; display: flex; justify-content: center; align-items: center; height: 100vh;">
-  <h1>🚫 You don't have access to this page.</h1>
+<html><head><meta charset="utf-8"><title>No Access</title>
+<style>
+ body{display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;background:#f5f5f5}
+ .box{background:#fff;padding:30px;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.1);text-align:center}
+ .box h1{margin-bottom:20px}
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>🚫 No Access</h1>
+    <p>You don’t have permission to view this page.</p>
+    <button onclick="location.href='/'">Home</button>
+  </div>
 </body>
 </html>
