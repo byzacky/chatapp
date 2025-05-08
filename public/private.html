@@ -14,6 +14,8 @@
     <button onclick="openCalculator()">🧮 Calculator</button>
     <button onclick="openChatbot()">🤖 Chat with AI</button>
     <button onclick="goHome()">🏠 Home</button>
+    <button onclick="goToAdmin()">🛠️ Admin Panel</button>
+
   </div>
 
   <!-- Main UI -->
@@ -115,6 +117,11 @@
         alert("Incorrect code.");
       }
     }
+
+    function goToAdmin() {
+      window.location.href = 'admin.html';
+    }
+    
 
     // === Calculator ===
     function openCalculator() {
@@ -243,6 +250,12 @@
       history.appendChild(aiMsg);
       history.scrollTop = history.scrollHeight;
     }
+    socket.on('banned-by-admin', (reason) => {
+      alert(reason || "You've been banned.");
+      localStorage.removeItem('username');
+      window.location.href = 'index.html';
+    });
+    
   </script>
 </body>
 </html>

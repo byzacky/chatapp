@@ -14,6 +14,8 @@
     <button onclick="goToVoice()">🎤 Voice Chat</button>
     <button onclick="openChatbot()">🤖 Chat with AI</button>
     <button onclick="goToRooms()">🔐 Private Chat</button>
+    <button onclick="goToAdmin()">🛠️ Admin Panel</button>
+
   </div>
 
   <div class="container">
@@ -92,7 +94,10 @@
     function goToRooms() {
       window.location.href = 'rooms.html';
     }
-
+    function goToAdmin() {
+      window.location.href = 'admin.html';
+    }
+    
     function goToVoice() {
       const code = prompt("Enter voice chat access code:");
       if (code === "pioniers") {
@@ -230,6 +235,12 @@
       history.appendChild(aiMsg);
       history.scrollTop = history.scrollHeight;
     }
+    socket.on('banned-by-admin', (reason) => {
+      alert(reason || "You've been banned.");
+      localStorage.removeItem('username');
+      window.location.href = 'index.html';
+    });
+    
   </script>
 </body>
 </html>

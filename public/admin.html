@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snappet</title>
+   <link rel="icon" sizes="192x192" href="https://pupil.snappet.org/icon192.png">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1e1e2f;
+      color: white;
+      padding: 40px;
+    }
+    .container {
+      max-width: 50%;
+      margin: auto;
+      background: #2b2b3d;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    h2 {
+      text-align: center;
+      font-size: 28px;
+    }
+    .section {
+      margin: 25px 0;
+    }
+    .section h3 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #555;
+      padding-bottom: 5px;
+    }
+    .card {
+      background: #333;
+      border-radius: 8px;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card input {
+      flex: 1;
+      margin-right: 10px;
+      padding: 5px;
+      border-radius: 4px;
+      border: none;
+    }
+    .card span {
+      flex: 1;
+    }
+    button {
+      background: #00d1b2;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    button:hover {
+      opacity: 0.8;
+    }
+    input, select {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 6px;
+      border: none;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>👮 Admin Panel</h2>
+
+    <div id="admin-content" style="display: none;">
+      <div class="section">
+        <h3>💬 Private Rooms</h3>
+        <div id="roomList"></div>
+      </div>
+
+      <div class="section">
+        <h3>➕ Create New User</h3>
+        <input id="new-username" placeholder="👤 Username">
+        <input id="new-password" type="password" placeholder="🔒 Password">
+        <select id="new-rank">
+          <option value="member">👥 Member</option>
+          <option value="mod">🛡️ Mod</option>
+        </select>
+        <button onclick="createUser()">✅ Create</button>
+      </div>
+
+      <div class="section">
+        <h3>📂 User Database</h3>
+        <div id="allUsersList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const username = localStorage.getItem('username');
+    const rank = localStorage.getItem('rank');
+    if (!username || rank !== 'mod') {
+      window.location.href = 'site/no-access.html';
+    }
+
+    document.getElementById('admin-content').style.display = 'block';
+
+    async function loadAdminPanel() {
+      const res = await fetch('/admin-data');
+      const data = await res.json();
+
+      const activeUsers = new Set(data.activeUsers);
+      const allUsersList = document.getElementById('allUsersList');
+      allUsersList.innerHTML = '';
+
+      Object.entries(data.userDB).forEach(([user, info]) => {
+        let statusColor = 'red';
+        if (info.banned) statusColor = 'gray';
+        else if (activeUsers.has(user)) statusColor = 'limegreen';
+
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+          <span style="color: ${statusColor}; font-weight: bold;">${user} (${info.rank}) - banned: ${info.banned}</span>
+          <div>
+            <button onclick="toggleBan('${user}')">${info.banned ? '🔓 Unban' : '🔒 Ban'}</button>
+            <button onclick="deleteUser('${user}')">❌ Delete</button>
+          </div>
+        `;
+        allUsersList.appendChild(div);
+      });
+
+      const roomList = document.getElementById('roomList');
+      roomList.innerHTML = '';
+      data.rooms.forEach(room => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+          <input value="${room}" id="room-${room}">
+          <button onclick="renameRoom('${room}', document.getElementById('room-${room}').value)">✏️ Rename</button>
+          <button onclick="deleteRoom('${room}')">❌ Delete</button>
+        `;
+        roomList.appendChild(div);
+      });
+    }
+
+    async function toggleBan(user) {
+      await fetch(`/admin-ban-toggle?user=${user}`);
+      loadAdminPanel();
+    }
+
+    async function deleteRoom(name) {
+      await fetch(`/admin-delete-room?room=${name}`);
+      loadAdminPanel();
+    }
+
+    async function deleteUser(user) {
+      await fetch(`/admin-delete-user?user=${user}`);
+      loadAdminPanel();
+    }
+
+    async function createUser() {
+      const user = document.getElementById('new-username').value;
+      const pass = document.getElementById('new-password').value;
+      const rank = document.getElementById('new-rank').value;
+      await fetch('/admin-create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, password: pass, rank })
+      });
+      loadAdminPanel();
+    }
+
+    loadAdminPanel();
+  </script>
+</body>
+</html>
